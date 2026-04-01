@@ -1,31 +1,39 @@
+#!/usr/bin/env python
+# count_codons.py
+# Count the frequency of in-frame codons upstream of a given stop codon and plot a pie chart
+
 import sys
 
-
+# ==================== Environment check ====================
 try:
     import matplotlib.pyplot as plt
-    plt.switch_backend('Agg')          
+    plt.switch_backend('Agg')          # Use non-interactive backend to avoid GUI dependency
 except ImportError as e:
-    print("错误：无法导入 matplotlib。请安装 matplotlib 库：")
+    print("Error: matplotlib could not be imported. Please install it with:")
     print("  pip install matplotlib")
-    print("如果已经安装，请检查你的 Python 环境是否正确。")
+    print("If already installed, check your Python environment.")
     sys.exit(1)
 except Exception as e:
-    print(f"导入 matplotlib 时出错: {e}")
-    print("请尝试使用 Miniconda 环境中的 Python 运行此脚本。")
+    print(f"Error importing matplotlib: {e}")
+    print("Please try running this script with the Miniconda Python environment.")
     sys.exit(1)
 
+# ==================== Parameter settings ====================
 valid_stops = ['TAA', 'TAG', 'TGA']
 
+# Get user input for stop codon
 while True:
-    target_stop = input(f"请输入终止密码子 ({', '.join(valid_stops)}): ").upper().strip()
+    target_stop = input(f"Enter stop codon ({', '.join(valid_stops)}): ").upper().strip()
     if target_stop in valid_stops:
         break
-    print(f"无效输入，请从 {valid_stops} 中选择一个。")
+    print(f"Invalid input. Please choose from {valid_stops}.")
 
-fasta_file = input("请输入 FASTA 文件名（默认: Saccharomyces_cerevisiae.cdna.all.fa）: ").strip()
+# Input file (you can change to your actual file name)
+fasta_file = input("Enter FASTA file name (default: Saccharomyces_cerevisiae.cdna.all.fa): ").strip()
 if not fasta_file:
     fasta_file = "Saccharomyces_cerevisiae.cdna.all.fa"
 
+# ==================== Read FASTA file ====================
 genes = {}
 current_id = None
 current_seq_parts = []
@@ -39,7 +47,7 @@ try:
             if line.startswith('>'):
                 if current_id is not None:
                     genes[current_id] = ''.join(current_seq_parts)
-                
+                # Extract gene name: take the first word after '>'
                 header = line[1:]
                 current_id = header.split()[0]
                 current_seq_parts = []
@@ -48,34 +56,34 @@ try:
         if current_id is not None:
             genes[current_id] = ''.join(current_seq_parts)
 except FileNotFoundError:
-    print(f"错误：文件 '{fasta_file}' 不存在。")
+    print(f"Error: File '{fasta_file}' not found.")
     sys.exit(1)
 
-print(f"共读取 {len(genes)} 条基因序列。")
+print(f"Total genes read: {len(genes)}")
 
-
+# ==================== Find the longest ORF and count codons ====================
 all_codon_counts = {}
 genes_with_valid_orf = 0
 
 for gene_name, seq in genes.items():
-    seq = seq.upper()          
-    longest_orf_seq = ""      
+    seq = seq.upper()          # Convert to uppercase
+    longest_orf_seq = ""       # Longest ORF sequence for this gene
     max_orf_len = 0
 
-   
+    # Try three reading frames
     for frame in range(3):
         i = frame
         while i + 3 <= len(seq):
-            if seq[i:i+3] == 'ATG':               
+            if seq[i:i+3] == 'ATG':                # Start codon found
                 start = i
-    
+                # Scan the reading frame for all occurrences of target_stop
                 last_stop_pos = -1
                 pos = start + 3
                 while pos + 3 <= len(seq):
                     codon = seq[pos:pos+3]
                     if codon == target_stop:
-                        last_stop_pos = pos        
-                    elif codon in valid_stops:     
+                        last_stop_pos = pos       # Record the last occurrence
+                    elif codon in valid_stops:     # Other stop codon ends this reading frame
                         break
                     pos += 3
                 if last_stop_pos != -1:
@@ -87,23 +95,26 @@ for gene_name, seq in genes.items():
 
     if longest_orf_seq:
         genes_with_valid_orf += 1
-    
+        # Count all codons inside this ORF (excluding the stop codon)
+        # Start from the start codon and go up to the stop codon (step 3)
         for k in range(0, len(longest_orf_seq) - 3, 3):
             codon = longest_orf_seq[k:k+3]
             if len(codon) == 3:
                 all_codon_counts[codon] = all_codon_counts.get(codon, 0) + 1
 
 if not all_codon_counts:
-    print(f"没有找到任何以 {target_stop} 结束的 ORF。")
+    print(f"No ORFs ending with {target_stop} were found.")
     sys.exit(0)
 
-print(f"\n在 {len(genes)} 条基因中，有 {genes_with_valid_orf} 条包含以 {target_stop} 结束的 ORF。")
+print(f"\nAmong {len(genes)} genes, {genes_with_valid_orf} contain an ORF ending with {target_stop}.")
 total_codons = sum(all_codon_counts.values())
-print(f"共统计到 {total_codons} 个密码子。")
+print(f"Total codons counted: {total_codons}")
 
-
+# ==================== Plot pie chart ====================
+# Sort by count descending
 sorted_items = sorted(all_codon_counts.items(), key=lambda x: x[1], reverse=True)
 
+# Show only top 10, merge the rest into 'Other'
 top_n = 10
 top_items = sorted_items[:top_n]
 others_count = sum(count for _, count in sorted_items[top_n:])
@@ -117,10 +128,10 @@ if others_count > 0:
 plt.figure(figsize=(12, 8))
 wedges, texts, autotexts = plt.pie(sizes, labels=labels, autopct='%1.1f%%',
                                    startangle=140, textprops={'fontsize': 10})
-plt.title(f"终止密码子 {target_stop} 上游同框密码子分布\n"
-          f"(基于 {genes_with_valid_orf} 个基因的 {total_codons} 个密码子)")
+plt.title(f"Distribution of in-frame codons upstream of stop codon {target_stop}\n"
+          f"(Based on {genes_with_valid_orf} genes, {total_codons} codons)")
 
-
+# Beautify percentage text
 for autotext in autotexts:
     autotext.set_color('white')
     autotext.set_fontweight('bold')
@@ -130,5 +141,7 @@ plt.tight_layout()
 
 output_file = f"codon_usage_{target_stop}.png"
 plt.savefig(output_file, dpi=300)
-print(f"\n饼图已保存为: {output_file}")
+print(f"\nPie chart saved as: {output_file}")
 
+# Optional: display the chart (uncomment if GUI is available)
+# plt.show()
