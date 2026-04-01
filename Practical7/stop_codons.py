@@ -1,54 +1,43 @@
-# stop_codons.py
-# Read yeast cDNA FASTA, filter genes containing stop codons, write simplified FASTA
-
-import sys
-
-stop_codons = ['TAA', 'TAG', 'TGA']
-input_fasta = "Saccharomyces_cerevisiae.R64-1-1.cdna.all.fa"   
-output_fasta = "stop_genes.fa"
-
-def parse_fasta(filename):
-    sequences = {}
-    current_id = None
-    current_seq = []
-    with open(filename, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith('>'):
-                if current_id is not None:
-                    sequences[current_id] = ''.join(current_seq)
-                header = line[1:]
-                gene_name = header.split()[0]
-                current_id = gene_name
-                current_seq = []
-            else:
-                current_seq.append(line)
-        if current_id is not None:
-            sequences[current_id] = ''.join(current_seq)
-    return sequences
-
-def check_stop_codons(seq):
-    found = []
-    for codon in stop_codons:
-        if codon in seq.upper():
-            found.append(codon)
-    return found
-
-try:
-    sequences = parse_fasta(input_fasta)
-except FileNotFoundError:
-    print(f"Error: file {input_fasta} not found.")
-    sys.exit(1)
-
-with open(output_fasta, 'w') as out:
-    for gene, seq in sequences.items():
-        stops = check_stop_codons(seq)
-        if stops:
-            out.write(f">{gene} {','.join(stops)}\n")
-            for i in range(0, len(seq), 60):
-                out.write(seq[i:i+60] + '\n')
-            out.write('\n')
-
-print(f"Done. Filtered genes saved to {output_fasta}")
+input_file = 'Saccharomyces_cerevisiae.R64-1-1.cdna.all.fa'
+output_file = 'stop_genes.fa'
+with open(input_file, 'r') as fin, open(output_file, 'w') as fout:
+    current_gene_name = ""
+    current_sequence = ""
+    for line in fin:
+        line = line.strip()
+        if line.startswith('>'):
+          if current_sequence:
+             found_stops = set()
+             seq_len=len(current_sequence)
+             for i in range(seq_len - 2):
+                 if current_sequence[i:i+3]=='ATG':
+                    for j in range(i+3, seq_len-2,3):
+                        next_codon = current_sequence[j:j+3]
+                        if next_codon in ('TAA','TAG','TGA'):
+                            found_stops.add(next_codon)
+                            break
+             if found_stops:
+                 stop_codon_str=' '.join(sorted(found_stops))
+                 fout.write(f">{current_gene_name};{stop_codon_str}\n")
+                 for k in range(0,len(current_sequence),80):
+                     fout.write(current_sequence[k:k+80] + '\n')
+          header=line[1:]
+          current_gene_name=header.split()[0]
+          current_sequence=""
+        else:
+            current_sequence+=line
+    if current_sequence:
+        found_stops=set()
+        seq_len=len(current_sequence)
+        for i in range(seq_len - 2):
+            if current_sequence[i:i+3] == 'ATG':
+                for j in range(i+3, seq_len-2, 3):
+                    codon = current_sequence[j:j+3]
+                    if codon in ('TAA', 'TAG', 'TGA'):
+                        found_stops.add(codon)
+                        break
+        if found_stops:
+            stop_codon_str = ' '.join(sorted(found_stops))
+            fout.write(f">{current_gene_name};{stop_codon_str}\n")
+            for k in range(0, len(current_sequence), 80):
+                fout.write(current_sequence[k:k+80] + '\n') 
