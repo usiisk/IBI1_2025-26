@@ -1,0 +1,7 @@
+This practical was quite interesting. I found the basic SIR model easy to implement, 
+but the spatial version was more challenging due to handling neighbor indices and 
+simultaneous updates. The most enjoyable part was seeing the disease spread visually 
+in the 2D model. I also learned that even small changes in beta or gamma can 
+dramatically affect the outbreak. The vaccination extension helped me understand 
+herd immunity intuitively. Overall, it was a valuable hands-on experience with 
+stochastic modeling.
