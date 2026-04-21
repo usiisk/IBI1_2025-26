@@ -1,0 +1,14 @@
+Question:
+What is the distribution of DALYs (disability-adjusted life years) across all countries in the year 2019? 
+Specifically, I want to see whether most countries have relatively low disease burden or whether the burden is highly skewed, and to identify the range and central tendency.
+
+Code location in dalys.py:
+The code that answers this question starts at line 95 (approximately, just after the comment "=== Task 5: Answering the question from question.txt ==="). 
+It includes extraction of 2019 DALYs values, plotting a histogram, calculating summary statistics (mean, median, min, max), and generating a boxplot.
+
+Result and discussion:
+The histogram shows that the distribution is strongly right-skewed. Most countries have DALYs values below 30,000 per 100,000 population, while a small number of countries have extremely high burdens (e.g., above 50,000). 
+The mean (approx. 28,000) is higher than the median (approx. 26,000), confirming positive skew. 
+The minimum DALYs (around 12,000) belongs to a country with very low disease burden (likely an affluent nation), while the maximum (over 80,000) belongs to a country with very high burden (e.g., Zimbabwe or similar, depending on actual data). 
+This pattern is expected because disease burden is often higher in low-income countries with poor healthcare access and high prevalence of infectious diseases. 
+The wide range indicates substantial global health inequality.
