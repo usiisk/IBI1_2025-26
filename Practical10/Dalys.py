@@ -12,7 +12,7 @@ import numpy as np
 # ============================================================
 # 1. Set working directory (modify the path accordingly)
 # ============================================================
-os.chdir("/path/to/your/data/folder")   # <-- modify this
+os.chdir("\users\yjx34\desktop\IBI1")   
 
 # Optional: verify current directory and file list
 print("Current working directory:", os.getcwd())
