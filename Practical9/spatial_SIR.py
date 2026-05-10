@@ -1,58 +1,61 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 
-# Parameters
-size = 100               # grid size 100x100
-beta = 0.3               # infection probability per contact
-gamma = 0.05             # recovery probability
-T = 100                  # number of time steps
+# Parameters for spatial SIR model
+size = 100                  # Grid size (100x100)
+beta = 0.3                  # Infection probability per neighbor contact
+gamma = 0.05                # Recovery probability per time step
+T = 100                     # Total simulation time steps
 
-# Initialize grid: 0 = susceptible, 1 = infected, 2 = recovered
+# Initialize grid: 0 = Susceptible, 1 = Infected, 2 = Recovered
 population = np.zeros((size, size), dtype=int)
 
-# Randomly select one initial infected individual
-outbreak = np.random.choice(range(size), 2)
+# Randomly select one individual as initial infection
+outbreak = np.random.choice(size, 2)
 population[outbreak[0], outbreak[1]] = 1
 
-# Prepare figure
+# Create figure for dynamic visualization
 plt.figure(figsize=(6, 4), dpi=150)
 
-# Neighbour offsets (8 directions)
-neighbors = [(-1,-1), (-1,0), (-1,1),
-             (0,-1),          (0,1),
-             (1,-1),  (1,0),  (1,1)]
+# 8-directional neighbors for spatial infection
+neighbors = [(-1, -1), (-1, 0), (-1, 1),
+             (0, -1),          (0, 1),
+             (1, -1),  (1, 0), (1, 1)]
 
-# Time loop
+# Main simulation loop
 for t in range(T):
-    # Copy current state for simultaneous updates
+    # Use a copy to ensure simultaneous state update
     new_pop = population.copy()
     
-    # Find all infected individuals
-    infected = np.argwhere(population == 1)
+    # Get coordinates of all infected individuals
+    infected_coords = np.argwhere(population == 1)
     
-    for (x, y) in infected:
+    # Process each infected cell
+    for (x, y) in infected_coords:
         # Recovery process
         if np.random.rand() < gamma:
-            new_pop[x, y] = 2   # recovered
+            new_pop[x, y] = 2
         
-        # Infect neighbours
+        # Infection process: spread to 8 neighbors
         for dx, dy in neighbors:
             nx, ny = x + dx, y + dy
-            # Check boundaries
+            # Check grid boundaries
             if 0 <= nx < size and 0 <= ny < size:
-                if population[nx, ny] == 0:   # susceptible
-                    if np.random.rand() < beta:
-                        new_pop[nx, ny] = 1   # infected
+                # Only susceptible neighbors can be infected
+                if population[nx, ny] == 0 and np.random.rand() < beta:
+                    new_pop[nx, ny] = 1
     
+    # Update population to new state
     population = new_pop
     
-    # Plot every 10 time steps (or final step)
-    if t % 10 == 0 or t == T-1:
+    # Plot and update animation every 10 steps or at final step
+    if t % 10 == 0 or t == T - 1:
         plt.clf()
         plt.imshow(population, cmap='viridis', interpolation='nearest', vmin=0, vmax=2)
         plt.title(f'Time step {t}')
-        plt.colorbar(ticks=[0,1,2], label='0=Susceptible, 1=Infected, 2=Recovered')
-        plt.pause(0.1)   # show dynamically
+        plt.colorbar(ticks=[0, 1, 2], label='0=Susceptible, 1=Infected, 2=Recovered')
+        plt.pause(0.1)
 
+# Save the final state of simulation
+plt.savefig("spatial_SIR_final.png")
 plt.show()
