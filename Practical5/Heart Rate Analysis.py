@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 print("\n" + "=" * 50)
 print("2. Heart Rate Analysis")
 print("=" * 50)
