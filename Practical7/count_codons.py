@@ -4,18 +4,22 @@
 
 import sys
 
-# ==================== Environment check ====================
+# ==================== Environment check & Fix font globally ====================
 try:
     import matplotlib.pyplot as plt
-    plt.switch_backend('Agg')          # Use non-interactive backend to avoid GUI dependency
+    plt.switch_backend('Agg')
+
+    # FIX GITHUB BOX / GARBLED TEXT PROBLEM (PERFECT SOLUTION)
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial']
+    plt.rcParams['axes.unicode_minus'] = False
+
 except ImportError as e:
     print("Error: matplotlib could not be imported. Please install it with:")
     print("  pip install matplotlib")
-    print("If already installed, check your Python environment.")
     sys.exit(1)
 except Exception as e:
     print(f"Error importing matplotlib: {e}")
-    print("Please try running this script with the Miniconda Python environment.")
     sys.exit(1)
 
 # ==================== Parameter settings ====================
@@ -28,10 +32,10 @@ while True:
         break
     print(f"Invalid input. Please choose from {valid_stops}.")
 
-# Input file (you can change to your actual file name)
-fasta_file = input("Enter FASTA file name (default: Saccharomyces_cerevisiae.cdna.all.fa): ").strip()
+# Input file (matches your actual filename)
+fasta_file = input("Enter FASTA file name (default: Saccharomyces_cerevisiae.R64-1-1.cdna.all.fa): ").strip()
 if not fasta_file:
-    fasta_file = "Saccharomyces_cerevisiae.cdna.all.fa"
+    fasta_file = "Saccharomyces_cerevisiae.R64-1-1.cdna.all.fa"
 
 # ==================== Read FASTA file ====================
 genes = {}
@@ -47,7 +51,6 @@ try:
             if line.startswith('>'):
                 if current_id is not None:
                     genes[current_id] = ''.join(current_seq_parts)
-                # Extract gene name: take the first word after '>'
                 header = line[1:]
                 current_id = header.split()[0]
                 current_seq_parts = []
@@ -61,29 +64,28 @@ except FileNotFoundError:
 
 print(f"Total genes read: {len(genes)}")
 
-# ==================== Find the longest ORF and count codons ====================
+# ==================== Find ORFs and count codons ====================
 all_codon_counts = {}
 genes_with_valid_orf = 0
 
 for gene_name, seq in genes.items():
-    seq = seq.upper()          # Convert to uppercase
-    longest_orf_seq = ""       # Longest ORF sequence for this gene
+    seq = seq.upper()
+    longest_orf_seq = ""
     max_orf_len = 0
 
-    # Try three reading frames
+    # Check all 3 reading frames
     for frame in range(3):
         i = frame
         while i + 3 <= len(seq):
-            if seq[i:i+3] == 'ATG':                # Start codon found
+            if seq[i:i+3] == 'ATG':
                 start = i
-                # Scan the reading frame for all occurrences of target_stop
                 last_stop_pos = -1
                 pos = start + 3
                 while pos + 3 <= len(seq):
                     codon = seq[pos:pos+3]
                     if codon == target_stop:
-                        last_stop_pos = pos       # Record the last occurrence
-                    elif codon in valid_stops:     # Other stop codon ends this reading frame
+                        last_stop_pos = pos
+                    elif codon in valid_stops:
                         break
                     pos += 3
                 if last_stop_pos != -1:
@@ -95,8 +97,6 @@ for gene_name, seq in genes.items():
 
     if longest_orf_seq:
         genes_with_valid_orf += 1
-        # Count all codons inside this ORF (excluding the stop codon)
-        # Start from the start codon and go up to the stop codon (step 3)
         for k in range(0, len(longest_orf_seq) - 3, 3):
             codon = longest_orf_seq[k:k+3]
             if len(codon) == 3:
@@ -111,10 +111,8 @@ total_codons = sum(all_codon_counts.values())
 print(f"Total codons counted: {total_codons}")
 
 # ==================== Plot pie chart ====================
-# Sort by count descending
 sorted_items = sorted(all_codon_counts.items(), key=lambda x: x[1], reverse=True)
 
-# Show only top 10, merge the rest into 'Other'
 top_n = 10
 top_items = sorted_items[:top_n]
 others_count = sum(count for _, count in sorted_items[top_n:])
@@ -126,12 +124,16 @@ if others_count > 0:
     sizes.append(others_count)
 
 plt.figure(figsize=(12, 8))
-wedges, texts, autotexts = plt.pie(sizes, labels=labels, autopct='%1.1f%%',
-                                   startangle=140, textprops={'fontsize': 10})
-plt.title(f"Distribution of in-frame codons upstream of stop codon {target_stop}\n"
-          f"(Based on {genes_with_valid_orf} genes, {total_codons} codons)")
+wedges, texts, autotexts = plt.pie(
+    sizes, labels=labels, autopct='%1.1f%%',
+    startangle=140, textprops={'fontsize': 10}
+)
 
-# Beautify percentage text
+# Clean, clear title (NO CHINESE, NO GARBLE)
+plt.title(f"Codon Distribution Upstream of Stop Codon {target_stop}\n"
+          f"Genes: {genes_with_valid_orf}, Total Codons: {total_codons}")
+
+# Make percentage text clean and white
 for autotext in autotexts:
     autotext.set_color('white')
     autotext.set_fontweight('bold')
@@ -139,9 +141,7 @@ for autotext in autotexts:
 plt.axis('equal')
 plt.tight_layout()
 
+# Save high-quality figure (GitHub-friendly)
 output_file = f"codon_usage_{target_stop}.png"
-plt.savefig(output_file, dpi=300)
+plt.savefig(output_file, dpi=300, bbox_inches='tight')
 print(f"\nPie chart saved as: {output_file}")
-
-# Optional: display the chart (uncomment if GUI is available)
-# plt.show()
