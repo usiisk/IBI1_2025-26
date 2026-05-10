@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 print("=" * 50)
 print("1. Gene Expression Analysis")
 print("=" * 50)
