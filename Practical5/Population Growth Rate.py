@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 print("\n" + "=" * 50)
 print("3. Population Growth Rate")
 print("=" * 50)
