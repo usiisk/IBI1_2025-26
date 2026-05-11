@@ -99,6 +99,10 @@ print(f"\nGenes with ORF ending with {target_stop}: {genes_with_valid_orf}")
 total_codons = sum(all_codon_counts.values())
 print(f"Total codons counted: {total_codons}")
 
+print("\nCodon counts upstream of stop codon:")
+for codon, count in sorted(all_codon_counts.items()):
+    print(f"{codon}: {count}")
+
 # ==================== Plot ALL codons — NO OTHER! ====================
 sorted_items = sorted(all_codon_counts.items(), key=lambda x: x[1], reverse=True)
 
