@@ -70,17 +70,17 @@ for gene_name, seq in genes.items():
                 pos = start + 3
 
                 # ==================== FIXED CORRECT LOGIC HERE ====================
-                # 遇到第一个终止密码子就停止！符合生物学规则
-                while pos + 3 <= len(seq):
+            
+              while pos + 3 <= len(seq):
                     codon = seq[pos:pos+3]
                     if codon in valid_stops:
-                        # 只有当第一个终止密码子 == 目标时，才记录这个 ORF
+                       
                         if codon == target_stop:
                             orf_len = pos + 3 - start
                             if orf_len > max_orf_len:
                                 max_orf_len = orf_len
                                 longest_orf_seq = seq[start:pos+3]
-                        break  # 无论是不是目标，都停止！
+                        break 
                     pos += 3
                 # ==================================================================
 
