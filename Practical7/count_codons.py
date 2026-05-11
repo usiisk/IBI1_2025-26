@@ -9,8 +9,13 @@ try:
     import matplotlib.pyplot as plt
     plt.switch_backend('Agg')
 except ImportError as e:
-    print("Error: matplotlib could not be imported. Please install it: pip install matplotlib")
+    print("Error: matplotlib could not be imported. Please install it with:")
+    print("  pip install matplotlib")
     sys.exit(1)
+
+# ==================== Fix font and avoid garbled text ====================
+plt.rcParams['font.sans-serif'] = ['Arial']
+plt.rcParams['axes.unicode_minus'] = False
 
 # ==================== Parameter settings ====================
 valid_stops = ['TAA', 'TAG', 'TGA']
@@ -19,11 +24,11 @@ while True:
     target_stop = input(f"Enter stop codon ({', '.join(valid_stops)}): ").upper().strip()
     if target_stop in valid_stops:
         break
-    print(f"Invalid input. Choose from {valid_stops}.")
+    print(f"Invalid input. Please choose from {valid_stops}.")
 
-fasta_file = input("Enter FASTA file name (default: Saccharomyces_cerevisiae.R64-1-1.cdna.all.fa): ").strip()
+fasta_file = input("Enter FASTA file name (default: Saccharomyces_cerevisiae.cdna.all.fa): ").strip()
 if not fasta_file:
-    fasta_file = "Saccharomyces_cerevisiae.R64-1-1.cdna.all.fa"
+    fasta_file = "Saccharomyces_cerevisiae.cdna.all.fa"
 
 # ==================== Read FASTA file ====================
 genes = {}
@@ -61,29 +66,25 @@ for gene_name, seq in genes.items():
     longest_orf_seq = ""
     max_orf_len = 0
 
-    # Check all 3 reading frames
     for frame in range(3):
         i = frame
         while i + 3 <= len(seq):
             if seq[i:i+3] == 'ATG':
                 start = i
+                last_stop_pos = -1
                 pos = start + 3
-
-                # ==================== FIXED CORRECT LOGIC HERE ====================
-            
-              while pos + 3 <= len(seq):
+                while pos + 3 <= len(seq):
                     codon = seq[pos:pos+3]
-                    if codon in valid_stops:
-                       
-                        if codon == target_stop:
-                            orf_len = pos + 3 - start
-                            if orf_len > max_orf_len:
-                                max_orf_len = orf_len
-                                longest_orf_seq = seq[start:pos+3]
-                        break 
+                    if codon == target_stop:
+                        last_stop_pos = pos
+                    elif codon in valid_stops:
+                        break
                     pos += 3
-                # ==================================================================
-
+                if last_stop_pos != -1:
+                    orf_len = last_stop_pos + 3 - start
+                    if orf_len > max_orf_len:
+                        max_orf_len = orf_len
+                        longest_orf_seq = seq[start:last_stop_pos+3]
             i += 3
 
     if longest_orf_seq:
@@ -94,10 +95,10 @@ for gene_name, seq in genes.items():
                 all_codon_counts[codon] = all_codon_counts.get(codon, 0) + 1
 
 if not all_codon_counts:
-    print(f"No ORFs ending with {target_stop} found.")
+    print(f"No ORFs ending with {target_stop} were found.")
     sys.exit(0)
 
-print(f"\nGenes with ORF ending with {target_stop}: {genes_with_valid_orf}")
+print(f"\nAmong {len(genes)} genes, {genes_with_valid_orf} contain an ORF ending with {target_stop}.")
 total_codons = sum(all_codon_counts.values())
 print(f"Total codons counted: {total_codons}")
 
@@ -115,12 +116,21 @@ if others_count > 0:
     sizes.append(others_count)
 
 plt.figure(figsize=(12, 8))
-plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, textprops={'fontsize': 10})
+wedges, texts, autotexts = plt.pie(
+    sizes, labels=labels, autopct='%1.1f%%',
+    startangle=140, textprops={'fontsize': 10}
+)
 
-plt.title(f"Codon Distribution Upstream of Stop Codon {target_stop}\nGenes: {genes_with_valid_orf}, Total Codons: {total_codons}")
+plt.title(f"Distribution of in-frame codons upstream of stop codon {target_stop}\n"
+          f"(Genes: {genes_with_valid_orf}, Total codons: {total_codons})")
+
+for autotext in autotexts:
+    autotext.set_color('white')
+    autotext.set_fontweight('bold')
 
 plt.axis('equal')
 plt.tight_layout()
+
 output_file = f"codon_usage_{target_stop}.png"
-plt.savefig(output_file, dpi=300, bbox_inches='tight')
+plt.savefig(output_file, dpi=300)
 print(f"\nPie chart saved as: {output_file}")
